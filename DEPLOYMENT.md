@@ -74,7 +74,7 @@ Your app will be live at the URL Railway provides. Open it in your browser and s
 3. Connect your GitHub repo
 4. Settings:
    - **Build Command:** `pip install -r requirements.txt`
-   - **Start Command:** `gunicorn app:app --bind 0.0.0.0:$PORT`
+   - **Start Command:** `python -m gunicorn app:app --bind 0.0.0.0:$PORT`
 5. Click **"Create Web Service"**
 6. For persistent data: Upgrade to a paid plan and add a **Persistent Disk** (mount at `/data`), then set `DATA_DIR=/data`
 
@@ -82,6 +82,7 @@ Your app will be live at the URL Railway provides. Open it in your browser and s
 
 ## Troubleshooting
 
-- **App won't start:** Check the logs in Railway/Render dashboard
+- **Build failed:** Check the build logs. If `gunicorn` isn't found, Railway may need the `nixpacks.toml` in the repo. Try redeploying after pulling the latest code.
+- **App won't start:** Check the logs in Railway/Render dashboard. Ensure `PORT` is set (Railway sets this automatically).
 - **Uploads or data lost:** Make sure you added the volume and `DATA_DIR` (Step 3)
 - **AI API errors:** The external AI API must be reachable from the server (it should work by default)
