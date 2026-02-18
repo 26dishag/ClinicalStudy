@@ -21,9 +21,14 @@ class SupabaseStorage:
         path = f"images/{filename}"
         upload_url = f"{self.url}/storage/v1/object/{self.BUCKET}/{path}"
         content_type = 'image/png' if filename.lower().endswith('.png') else 'image/jpeg'
-        headers = {**self._headers, 'Content-Type': content_type}
+        headers = {
+            **self._headers,
+            'Content-Type': content_type,
+            'x-upsert': 'true',
+        }
         r = requests.post(upload_url, data=file_data, headers=headers, timeout=30)
-        r.raise_for_status()
+        if r.status_code not in (200, 201):
+            raise Exception(f"Storage upload failed: {r.status_code} {r.text}")
         image_url = f"{self.url}/storage/v1/object/public/{self.BUCKET}/{path}"
         return path, image_url
 

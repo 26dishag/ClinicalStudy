@@ -32,6 +32,7 @@ Follow these steps to enable cloud storage so all users see the same data.
 3. Name: `uploads`
 4. Toggle **Public bucket** ON (so images load in the app)
 5. Click **Create bucket**
+6. Click the `uploads` bucket → **Policies** → **New Policy** → **Get started quickly** → **Allow public uploads** (or create custom: allow INSERT for all)
 
 ---
 
