@@ -97,6 +97,16 @@
       opacity: 0.8;
     }
 
+    .analyze-row {
+      text-align: center;
+      margin-top: -1rem;
+      margin-bottom: 2rem;
+    }
+
+    .analyze-row .btn {
+      margin-top: 0;
+    }
+
     .btn {
       display: inline-flex;
       align-items: center;
@@ -389,6 +399,8 @@
       </svg>
       <p>Drag and drop your ultrasound image here</p>
       <p class="hint">or click to browse (PNG, JPG, GIF, BMP, WebP)</p>
+    </div>
+    <div class="analyze-row">
       <button type="button" class="btn btn-primary" id="analyzeBtn" disabled>Analyze Image</button>
     </div>
 
@@ -464,7 +476,8 @@
       errorMsg.classList.remove('visible');
     }
 
-    analyzeBtn.addEventListener('click', async () => {
+    analyzeBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
       if (!selectedFile) return;
 
       errorMsg.classList.remove('visible');
@@ -506,7 +519,8 @@
       diagnosisInput.classList.toggle('required-empty', !val && resultCard.classList.contains('visible'));
     });
 
-    saveBtn.addEventListener('click', async () => {
+    saveBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
       if (!pendingResult) return;
       const diagnosis = diagnosisInput.value.trim();
       if (!diagnosis) {
@@ -524,6 +538,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             filename: pendingResult.filename,
+            filepath: pendingResult.filepath || pendingResult.filename,
             result: pendingResult.result,
             diagnosis: diagnosis
           })

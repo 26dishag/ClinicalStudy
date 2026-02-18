@@ -36,6 +36,10 @@ A web application for uploading ultrasound images, running them through an AI mo
 
 See **[DEPLOYMENT.md](DEPLOYMENT.md)** for step-by-step instructions to host this app on Railway or Render.
 
+## Cloud storage (persistent for all users)
+
+To store data in the cloud so it persists across users and redeploys, set up **Supabase**. See **[SUPABASE_SETUP.md](SUPABASE_SETUP.md)** for instructions.
+
 ## Storage
 
 - **Images**: Stored in the `uploads/` directory with unique filenames

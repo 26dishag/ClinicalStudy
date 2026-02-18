@@ -1,55 +1,34 @@
 """
 Clinical Study - Ultrasound Image Analysis
 Upload ultrasound images, run AI prediction, and store results.
+Uses local storage (SQLite + files) by default, or Supabase (cloud) when configured.
 """
 import os
 import base64
-import sqlite3
+import csv
+import json
 from datetime import datetime
+from io import StringIO
 from pathlib import Path
-from flask import Flask, request, render_template, jsonify, Response
+
+from flask import Flask, request, render_template, jsonify, Response, send_from_directory
 from werkzeug.utils import secure_filename
 
 from model import get_prediction
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max upload
-# Use DATA_DIR for persistent storage on Railway/Render (set in env, or default to app dir)
-_data_dir = Path(os.environ.get('DATA_DIR', Path(__file__).parent))
-app.config['UPLOAD_FOLDER'] = _data_dir / 'uploads'
-app.config['DATABASE'] = _data_dir / 'clinical_study.db'
 
 # Allowed image extensions
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'}
 
-Path(app.config['UPLOAD_FOLDER']).mkdir(parents=True, exist_ok=True)
 
-
-def get_db():
-    conn = sqlite3.connect(app.config['DATABASE'])
-    conn.row_factory = sqlite3.Row
-    return conn
-
-
-def init_db():
-    conn = get_db()
-    conn.execute('''
-        CREATE TABLE IF NOT EXISTS predictions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            filename TEXT NOT NULL,
-            filepath TEXT NOT NULL,
-            result TEXT NOT NULL,
-            diagnosis TEXT DEFAULT '',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    # Add diagnosis column if migrating from old schema
-    try:
-        conn.execute('ALTER TABLE predictions ADD COLUMN diagnosis TEXT DEFAULT \'\'')
-        conn.commit()
-    except sqlite3.OperationalError:
-        pass  # Column already exists
-    conn.close()
+def get_storage():
+    if os.environ.get('SUPABASE_URL') and os.environ.get('SUPABASE_KEY'):
+        from storage_supabase import SupabaseStorage
+        return SupabaseStorage()
+    from storage_local import LocalStorage
+    return LocalStorage()
 
 
 def allowed_file(filename):
@@ -80,22 +59,24 @@ def upload_image():
         return jsonify({'error': 'Invalid file type. Allowed: png, jpg, jpeg, gif, bmp, webp'}), 400
 
     try:
+        storage = get_storage()
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         ext = file.filename.rsplit('.', 1)[1].lower()
         safe_name = secure_filename(file.filename.rsplit('.', 1)[0])
         filename = f"{safe_name}_{timestamp}.{ext}"
-        filepath = Path(app.config['UPLOAD_FOLDER']) / filename
-        file.save(filepath)
 
-        with open(filepath, 'rb') as img:
-            payload = base64.b64encode(img.read())
+        file_data = file.read()
+        filepath, image_url = storage.save_file(file_data, filename)
+
+        payload = base64.b64encode(file_data)
         result = get_prediction(payload)
 
         return jsonify({
             'success': True,
             'filename': filename,
+            'filepath': filepath,
             'result': result,
-            'image_url': f'/uploads/{filename}'
+            'image_url': image_url
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -106,6 +87,7 @@ def save_record():
     """Save record to database. Diagnosis is required."""
     data = request.get_json() or {}
     filename = data.get('filename', '').strip()
+    filepath = data.get('filepath', '').strip()
     result = data.get('result', '').strip()
     diagnosis = data.get('diagnosis', '').strip()
 
@@ -114,19 +96,12 @@ def save_record():
     if not diagnosis:
         return jsonify({'error': 'Actual diagnosis is required'}), 400
 
-    filepath = Path(app.config['UPLOAD_FOLDER']) / filename
-    if not filepath.exists():
-        return jsonify({'error': 'Image file not found'}), 400
-
     try:
-        conn = get_db()
-        conn.execute(
-            'INSERT INTO predictions (filename, filepath, result, diagnosis) VALUES (?, ?, ?, ?)',
-            (filename, str(filepath), result, diagnosis)
-        )
-        conn.commit()
-        record_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
-        conn.close()
+        storage = get_storage()
+        if not storage.file_exists(filename) and not filepath:
+            return jsonify({'error': 'Image file not found'}), 400
+
+        record_id, image_url = storage.insert_record(filename, filepath or filename, result, diagnosis)
 
         return jsonify({
             'success': True,
@@ -135,7 +110,7 @@ def save_record():
             'filename': filename,
             'result': result,
             'diagnosis': diagnosis,
-            'image_url': f'/uploads/{filename}'
+            'image_url': image_url
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -143,27 +118,26 @@ def save_record():
 
 @app.route('/uploads/<filename>')
 def serve_upload(filename):
-    from flask import send_from_directory
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+    """Serve local uploads (only used when not using Supabase)."""
+    storage = get_storage()
+    if hasattr(storage, 'upload_folder'):
+        return send_from_directory(storage.upload_folder, filename)
+    return jsonify({'error': 'Not found'}), 404
 
 
 @app.route('/history')
 def history():
-    conn = get_db()
-    rows = conn.execute(
-        'SELECT id, filename, result, diagnosis, created_at FROM predictions ORDER BY id ASC'
-    ).fetchall()
-    conn.close()
-
+    storage = get_storage()
+    rows = storage.get_all_records()
     records = [
         {
             'id': r['id'],
             'number': r['id'],
             'filename': r['filename'],
             'result': r['result'],
-            'diagnosis': r['diagnosis'] or '',
+            'diagnosis': r.get('diagnosis') or '',
             'created_at': r['created_at'],
-            'image_url': f"/uploads/{r['filename']}"
+            'image_url': r.get('image_url') or f"/uploads/{r['filename']}"
         }
         for r in rows
     ]
@@ -173,34 +147,26 @@ def history():
 @app.route('/export')
 def export_data():
     fmt = request.args.get('format', 'csv').lower()
-    conn = get_db()
-    rows = conn.execute(
-        'SELECT id, filename, result, diagnosis, created_at FROM predictions ORDER BY id ASC'
-    ).fetchall()
-    conn.close()
-
+    storage = get_storage()
+    rows = storage.get_all_records()
     records = [
         {
             'number': r['id'],
             'filename': r['filename'],
             'ai_prediction': r['result'],
-            'actual_diagnosis': r['diagnosis'] or '',
+            'actual_diagnosis': r.get('diagnosis') or '',
             'created_at': r['created_at'],
         }
         for r in rows
     ]
 
     if fmt == 'json':
-        import json
         return Response(
             json.dumps(records, indent=2),
             mimetype='application/json',
             headers={'Content-Disposition': 'attachment; filename=clinical_study_export.json'}
         )
 
-    # CSV
-    import csv
-    from io import StringIO
     output = StringIO()
     writer = csv.DictWriter(output, fieldnames=['number', 'filename', 'ai_prediction', 'actual_diagnosis', 'created_at'])
     writer.writeheader()
@@ -212,8 +178,9 @@ def export_data():
     )
 
 
-# Initialize DB when app loads (for gunicorn)
-init_db()
+# Initialize local DB when using local storage
+if not (os.environ.get('SUPABASE_URL') and os.environ.get('SUPABASE_KEY')):
+    get_storage()  # Triggers LocalStorage init_db
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))
