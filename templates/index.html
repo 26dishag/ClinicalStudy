@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ultrasound Analysis | Clinical Study</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0f1419;
+      --surface: #1a2332;
+      --surface-hover: #243044;
+      --border: #2d3a4d;
+      --text: #e6edf3;
+      --text-muted: #8b9cb3;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --success: #22c55e;
+      --error: #ef4444;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'DM Sans', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.5rem;
+    }
+
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    .upload-zone {
+      background: var(--surface);
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      padding: 3rem 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-bottom: 2rem;
+    }
+
+    .upload-zone:hover,
+    .upload-zone.dragover {
+      border-color: var(--accent);
+      background: var(--surface-hover);
+    }
+
+    .upload-zone input {
+      display: none;
+    }
+
+    .upload-icon {
+      width: 48px;
+      height: 48px;
+      margin: 0 auto 1rem;
+      opacity: 0.7;
+    }
+
+    .upload-zone p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .upload-zone .hint {
+      margin-top: 0.5rem;
+      font-size: 0.8rem;
+      opacity: 0.8;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.5rem;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 500;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+      margin-top: 1rem;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--accent-hover);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .result-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      display: none;
+    }
+
+    .result-card.visible {
+      display: block;
+    }
+
+    .result-card h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: var(--text-muted);
+    }
+
+    .result-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      align-items: start;
+    }
+
+    @media (max-width: 600px) {
+      .result-content {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .preview-img {
+      width: 100%;
+      max-height: 280px;
+      object-fit: contain;
+      border-radius: 8px;
+      background: var(--bg);
+    }
+
+    .prediction-box {
+      background: var(--bg);
+      border-radius: 8px;
+      padding: 1.25rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--success);
+    }
+
+    .prediction-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .loading {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      padding: 1rem;
+      color: var(--text-muted);
+    }
+
+    .loading.visible {
+      display: flex;
+    }
+
+    .spinner {
+      width: 24px;
+      height: 24px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .error-msg {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--error);
+      padding: 1rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      display: none;
+    }
+
+    .error-msg.visible {
+      display: block;
+    }
+
+    .history-section {
+      margin-top: 3rem;
+      padding-top: 2rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .history-section h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: var(--text-muted);
+    }
+
+    .history-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+
+    .history-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+
+    .history-item:hover {
+      border-color: var(--accent);
+    }
+
+    .history-item img {
+      width: 100%;
+      height: 120px;
+      object-fit: cover;
+      display: block;
+    }
+
+    .history-item .info {
+      padding: 0.75rem;
+    }
+
+    .history-item .result {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--success);
+    }
+
+    .history-item .date {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+
+    .form-group {
+      margin-top: 1rem;
+      text-align: left;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      font-family: inherit;
+      font-size: 0.95rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+    }
+
+    .form-group input::placeholder {
+      color: var(--text-muted);
+      opacity: 0.7;
+    }
+
+    .btn-secondary {
+      background: var(--surface-hover);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      background: var(--border);
+    }
+
+    .export-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    .export-btns {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .image-number {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    .diagnosis-display {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+
+    .diagnosis-save-section {
+      margin-top: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .diagnosis-save-section .form-group {
+      margin-top: 0;
+      margin-bottom: 1rem;
+    }
+
+    .required {
+      color: var(--error);
+    }
+
+    .form-group input:invalid {
+      border-color: var(--border);
+    }
+
+    .form-group input.required-empty {
+      border-color: var(--error);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Ultrasound Image Analysis</h1>
+      <p class="subtitle">Upload an ultrasound image for AI-powered analysis</p>
+    </header>
+
+    <div class="error-msg" id="errorMsg"></div>
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+      <span>Analyzing image...</span>
+    </div>
+
+    <div class="upload-zone" id="uploadZone">
+      <input type="file" id="fileInput" accept="image/*">
+      <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="17 8 12 3 7 8"/>
+        <line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+      <p>Drag and drop your ultrasound image here</p>
+      <p class="hint">or click to browse (PNG, JPG, GIF, BMP, WebP)</p>
+      <button type="button" class="btn btn-primary" id="analyzeBtn" disabled>Analyze Image</button>
+    </div>
+
+    <div class="result-card" id="resultCard">
+      <h3>Analysis Result</h3>
+      <div class="result-content">
+        <div>
+          <img class="preview-img" id="previewImg" alt="Uploaded image">
+        </div>
+        <div>
+          <div class="prediction-label">AI Prediction</div>
+          <div class="prediction-box" id="predictionResult"></div>
+        </div>
+      </div>
+      <div class="diagnosis-save-section">
+        <div class="form-group">
+          <label for="diagnosisInput">Actual diagnosis <span class="required">*</span></label>
+          <input type="text" id="diagnosisInput" placeholder="Enter the clinical diagnosis..." required>
+        </div>
+        <button type="button" class="btn btn-primary" id="saveBtn" disabled>Save Record</button>
+      </div>
+    </div>
+
+    <section class="history-section">
+      <div class="export-row">
+        <h2>Previous Analyses</h2>
+        <div class="export-btns">
+          <a href="/export?format=csv" class="btn btn-secondary" download>Export CSV</a>
+          <a href="/export?format=json" class="btn btn-secondary" download>Export JSON</a>
+        </div>
+      </div>
+      <div class="history-grid" id="historyGrid"></div>
+    </section>
+  </div>
+
+  <script>
+    const uploadZone = document.getElementById('uploadZone');
+    const fileInput = document.getElementById('fileInput');
+    const diagnosisInput = document.getElementById('diagnosisInput');
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    const saveBtn = document.getElementById('saveBtn');
+    const resultCard = document.getElementById('resultCard');
+    const previewImg = document.getElementById('previewImg');
+    const predictionResult = document.getElementById('predictionResult');
+    const errorMsg = document.getElementById('errorMsg');
+    const loading = document.getElementById('loading');
+    const historyGrid = document.getElementById('historyGrid');
+
+    let selectedFile = null;
+    let pendingResult = null;
+
+    uploadZone.addEventListener('click', () => fileInput.click());
+    uploadZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadZone.classList.add('dragover');
+    });
+    uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+    uploadZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadZone.classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      if (file && file.type.startsWith('image/')) handleFile(file);
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) handleFile(file);
+    });
+
+    function handleFile(file) {
+      selectedFile = file;
+      analyzeBtn.disabled = false;
+      errorMsg.classList.remove('visible');
+    }
+
+    analyzeBtn.addEventListener('click', async () => {
+      if (!selectedFile) return;
+
+      errorMsg.classList.remove('visible');
+      loading.classList.add('visible');
+      resultCard.classList.remove('visible');
+      pendingResult = null;
+
+      const formData = new FormData();
+      formData.append('image', selectedFile);
+
+      try {
+        const res = await fetch('/upload', { method: 'POST', body: formData });
+        const data = await res.json();
+
+        if (!res.ok) throw new Error(data.error || 'Upload failed');
+
+        pendingResult = data;
+        previewImg.src = data.image_url;
+        predictionResult.textContent = data.result;
+        diagnosisInput.value = '';
+        diagnosisInput.classList.remove('required-empty');
+        saveBtn.disabled = true;
+        resultCard.classList.add('visible');
+        diagnosisInput.focus();
+      } catch (err) {
+        errorMsg.textContent = err.message;
+        errorMsg.classList.add('visible');
+      } finally {
+        loading.classList.remove('visible');
+        analyzeBtn.disabled = true;
+        selectedFile = null;
+        fileInput.value = '';
+      }
+    });
+
+    diagnosisInput.addEventListener('input', () => {
+      const val = diagnosisInput.value.trim();
+      saveBtn.disabled = !val;
+      diagnosisInput.classList.toggle('required-empty', !val && resultCard.classList.contains('visible'));
+    });
+
+    saveBtn.addEventListener('click', async () => {
+      if (!pendingResult) return;
+      const diagnosis = diagnosisInput.value.trim();
+      if (!diagnosis) {
+        diagnosisInput.classList.add('required-empty');
+        diagnosisInput.focus();
+        return;
+      }
+
+      errorMsg.classList.remove('visible');
+      saveBtn.disabled = true;
+
+      try {
+        const res = await fetch('/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            filename: pendingResult.filename,
+            result: pendingResult.result,
+            diagnosis: diagnosis
+          })
+        });
+        const data = await res.json();
+
+        if (!res.ok) throw new Error(data.error || 'Save failed');
+
+        pendingResult = null;
+        resultCard.classList.remove('visible');
+        loadHistory();
+      } catch (err) {
+        errorMsg.textContent = err.message;
+        errorMsg.classList.add('visible');
+        saveBtn.disabled = false;
+      }
+    });
+
+    async function loadHistory() {
+      try {
+        const res = await fetch('/history');
+        const records = await res.json();
+        historyGrid.innerHTML = records.map(r => `
+          <div class="history-item">
+            <img src="${r.image_url}" alt="${r.filename}">
+            <div class="info">
+              <div class="image-number">Image #${r.number}</div>
+              <div class="result">AI: ${escapeHtml(r.result)}</div>
+              ${r.diagnosis ? `<div class="diagnosis-display">Diagnosis: ${escapeHtml(r.diagnosis)}</div>` : ''}
+              <div class="date">${new Date(r.created_at).toLocaleString()}</div>
+            </div>
+          </div>
+        `).join('');
+      } catch (err) {
+        historyGrid.innerHTML = '<p style="color: var(--text-muted)">No previous analyses yet.</p>';
+      }
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    loadHistory();
+  </script>
+</body>
+</html>
