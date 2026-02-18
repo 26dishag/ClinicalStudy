@@ -15,18 +15,13 @@ class SupabaseStorage:
         self._ensure_bucket()
 
     def _ensure_bucket(self):
-        try:
-            self.client.storage.create_bucket(self.BUCKET, options={'public': True})
-        except Exception:
-            pass  # Bucket likely exists
+        # Bucket created manually in Supabase dashboard - skip to avoid header/options issues
+        pass
 
     def save_file(self, file_data, filename):
         path = f"images/{filename}"
-        content_type = 'image/png' if filename.lower().endswith('.png') else 'image/jpeg'
-        self.client.storage.from_(self.BUCKET).upload(
-            path, file_data,
-            file_options={'content-type': content_type, 'upsert': True}
-        )
+        # Minimal options - avoid bool/header issues; filenames are unique so no upsert needed
+        self.client.storage.from_(self.BUCKET).upload(path, file_data)
         image_url = self.client.storage.from_(self.BUCKET).get_public_url(path)
         return path, image_url
 
