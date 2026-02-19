@@ -9,16 +9,17 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #0f1419;
-      --surface: #1a2332;
-      --surface-hover: #243044;
-      --border: #2d3a4d;
-      --text: #e6edf3;
-      --text-muted: #8b9cb3;
-      --accent: #3b82f6;
-      --accent-hover: #2563eb;
-      --success: #22c55e;
-      --error: #ef4444;
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface-elevated: #21262d;
+      --border: #30363d;
+      --text: #f0f6fc;
+      --text-muted: #8b949e;
+      --accent: #58a6ff;
+      --accent-hover: #79b8ff;
+      --success: #3fb950;
+      --success-bg: rgba(63, 185, 80, 0.15);
+      --error: #f85149;
     }
 
     * {
@@ -36,18 +37,18 @@
     }
 
     .container {
-      max-width: 900px;
+      max-width: 920px;
       margin: 0 auto;
-      padding: 2rem;
+      padding: 2.5rem 1.5rem;
     }
 
     header {
       text-align: center;
-      margin-bottom: 3rem;
+      margin-bottom: 2.5rem;
     }
 
     h1 {
-      font-size: 1.75rem;
+      font-size: 1.875rem;
       font-weight: 600;
       letter-spacing: -0.02em;
       margin-bottom: 0.5rem;
@@ -55,24 +56,43 @@
 
     .subtitle {
       color: var(--text-muted);
-      font-size: 0.95rem;
+      font-size: 1rem;
     }
 
     .upload-zone {
       background: var(--surface);
       border: 2px dashed var(--border);
-      border-radius: 12px;
-      padding: 3rem 2rem;
+      border-radius: 16px;
+      padding: 2.5rem 2rem;
       text-align: center;
       cursor: pointer;
-      transition: all 0.2s ease;
-      margin-bottom: 2rem;
+      transition: all 0.25s ease;
+      margin-bottom: 1rem;
+      position: relative;
     }
 
     .upload-zone:hover,
     .upload-zone.dragover {
       border-color: var(--accent);
-      background: var(--surface-hover);
+      background: var(--surface-elevated);
+    }
+
+    .upload-zone.has-file {
+      border-color: var(--success);
+      background: var(--success-bg);
+      border-style: solid;
+    }
+
+    .upload-zone.has-file {
+      cursor: default;
+    }
+
+    .upload-zone.has-file .upload-prompt {
+      display: none;
+    }
+
+    .upload-zone .upload-prompt {
+      transition: opacity 0.2s;
     }
 
     .upload-zone input {
@@ -80,31 +100,115 @@
     }
 
     .upload-icon {
-      width: 48px;
-      height: 48px;
+      width: 56px;
+      height: 56px;
       margin: 0 auto 1rem;
-      opacity: 0.7;
+      opacity: 0.8;
+    }
+
+    .upload-zone.has-file .upload-icon {
+      display: none;
     }
 
     .upload-zone p {
       color: var(--text-muted);
-      font-size: 0.9rem;
+      font-size: 0.95rem;
     }
 
     .upload-zone .hint {
       margin-top: 0.5rem;
+      font-size: 0.85rem;
+      opacity: 0.85;
+    }
+
+    .file-preview {
+      display: none;
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+      gap: 1.25rem;
+      padding: 0.5rem 0;
+    }
+
+    .upload-zone.has-file .file-preview {
+      display: flex;
+    }
+
+    @media (max-width: 480px) {
+      .file-preview {
+        flex-direction: column;
+      }
+    }
+
+    .file-preview-thumb {
+      width: 80px;
+      height: 80px;
+      object-fit: cover;
+      border-radius: 10px;
+      border: 2px solid var(--border);
+    }
+
+    .file-preview-info {
+      text-align: left;
+    }
+
+    .file-preview-name {
+      font-weight: 500;
+      font-size: 0.95rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .ready-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.35rem 0.75rem;
+      background: var(--success);
+      color: white;
       font-size: 0.8rem;
-      opacity: 0.8;
+      font-weight: 600;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .ready-badge::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      background: white;
+      border-radius: 50%;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .change-file {
+      margin-top: 0.75rem;
+      font-size: 0.85rem;
+      color: var(--accent);
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    .change-file:hover {
+      color: var(--accent-hover);
     }
 
     .analyze-row {
       text-align: center;
-      margin-top: -1rem;
       margin-bottom: 2rem;
     }
 
     .analyze-row .btn {
       margin-top: 0;
+      padding: 0.75rem 1.75rem;
+      font-size: 1rem;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(88, 166, 255, 0.25);
     }
 
     .btn {
@@ -118,39 +222,47 @@
       border: none;
       border-radius: 8px;
       cursor: pointer;
-      transition: background 0.2s;
+      transition: all 0.2s ease;
     }
 
     .btn-primary {
       background: var(--accent);
       color: white;
-      margin-top: 1rem;
     }
 
     .btn-primary:hover:not(:disabled) {
       background: var(--accent-hover);
+      transform: translateY(-1px);
     }
 
     .btn-primary:disabled {
-      opacity: 0.6;
+      opacity: 0.5;
       cursor: not-allowed;
+      transform: none;
     }
 
     .result-card {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 1.5rem;
+      border-radius: 16px;
+      padding: 1.75rem;
       margin-bottom: 2rem;
       display: none;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
     }
 
     .result-card.visible {
       display: block;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
     .result-card h3 {
-      font-size: 1rem;
+      font-size: 1.1rem;
       font-weight: 600;
       margin-bottom: 1rem;
       color: var(--text-muted);
@@ -178,13 +290,14 @@
     }
 
     .prediction-box {
-      background: var(--bg);
-      border-radius: 8px;
-      padding: 1.25rem;
+      background: var(--surface-elevated);
+      border-radius: 10px;
+      padding: 1.25rem 1.5rem;
       font-family: 'JetBrains Mono', monospace;
-      font-size: 1rem;
+      font-size: 1.05rem;
       font-weight: 500;
       color: var(--success);
+      border: 1px solid var(--border);
     }
 
     .prediction-label {
@@ -222,12 +335,13 @@
     }
 
     .error-msg {
-      background: rgba(239, 68, 68, 0.15);
+      background: rgba(248, 81, 73, 0.12);
       color: var(--error);
-      padding: 1rem;
-      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      border-radius: 10px;
       margin-bottom: 1rem;
       display: none;
+      border: 1px solid rgba(248, 81, 73, 0.3);
     }
 
     .error-msg.visible {
@@ -256,13 +370,15 @@
     .history-item {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 10px;
+      border-radius: 12px;
       overflow: hidden;
-      transition: border-color 0.2s;
+      transition: all 0.2s ease;
     }
 
     .history-item:hover {
       border-color: var(--accent);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
 
     .history-item img {
@@ -392,13 +508,23 @@
 
     <div class="upload-zone" id="uploadZone">
       <input type="file" id="fileInput" accept="image/*">
-      <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-        <polyline points="17 8 12 3 7 8"/>
-        <line x1="12" y1="3" x2="12" y2="15"/>
-      </svg>
-      <p>Drag and drop your ultrasound image here</p>
-      <p class="hint">or click to browse (PNG, JPG, GIF, BMP, WebP)</p>
+      <div class="upload-prompt">
+        <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        <p>Drag and drop your ultrasound image here</p>
+        <p class="hint">or click to browse (PNG, JPG, GIF, BMP, WebP)</p>
+      </div>
+      <div class="file-preview">
+        <img class="file-preview-thumb" id="previewThumb" alt="Preview">
+        <div class="file-preview-info">
+          <div class="file-preview-name" id="previewFileName"></div>
+          <span class="ready-badge">Ready to analyze</span>
+          <div class="change-file" id="changeFile">Choose different image</div>
+        </div>
+      </div>
     </div>
     <div class="analyze-row">
       <button type="button" class="btn btn-primary" id="analyzeBtn" disabled>Analyze Image</button>
@@ -439,6 +565,9 @@
   <script>
     const uploadZone = document.getElementById('uploadZone');
     const fileInput = document.getElementById('fileInput');
+    const previewThumb = document.getElementById('previewThumb');
+    const previewFileName = document.getElementById('previewFileName');
+    const changeFileBtn = document.getElementById('changeFile');
     const diagnosisInput = document.getElementById('diagnosisInput');
     const analyzeBtn = document.getElementById('analyzeBtn');
     const saveBtn = document.getElementById('saveBtn');
@@ -452,7 +581,10 @@
     let selectedFile = null;
     let pendingResult = null;
 
-    uploadZone.addEventListener('click', () => fileInput.click());
+    uploadZone.addEventListener('click', (e) => {
+      if (e.target.closest('.change-file')) return;
+      fileInput.click();
+    });
     uploadZone.addEventListener('dragover', (e) => {
       e.preventDefault();
       uploadZone.classList.add('dragover');
@@ -474,7 +606,26 @@
       selectedFile = file;
       analyzeBtn.disabled = false;
       errorMsg.classList.remove('visible');
+      uploadZone.classList.add('has-file');
+      previewThumb.src = URL.createObjectURL(file);
+      previewFileName.textContent = file.name;
     }
+
+    function clearFileSelection() {
+      if (previewThumb.src) URL.revokeObjectURL(previewThumb.src);
+      selectedFile = null;
+      analyzeBtn.disabled = true;
+      uploadZone.classList.remove('has-file');
+      previewThumb.src = '';
+      previewFileName.textContent = '';
+      fileInput.value = '';
+    }
+
+    changeFileBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      clearFileSelection();
+      fileInput.click();
+    });
 
     analyzeBtn.addEventListener('click', async (e) => {
       e.preventDefault();
@@ -508,8 +659,7 @@
       } finally {
         loading.classList.remove('visible');
         analyzeBtn.disabled = true;
-        selectedFile = null;
-        fileInput.value = '';
+        clearFileSelection();
       }
     });
 
